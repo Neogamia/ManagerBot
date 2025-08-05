@@ -68,10 +68,16 @@ client.on('messageCreate', async (msg) => {
                 });
                 msg.channel.send(filelist.toString().replaceAll(',', '\n'));
             } else {
-                msg.channel.send({files: [`./assets/${args[1]}`]})
+                const funny = ['snowball', 'babe', 'frank', 'diddy', 'gooner']
+                if(msg.member.roles.cache.find(r => r.name === 'Admin') || msg.member.id == '960946185768685618') {
+                    msg.channel.send({files: [`./assets/${args[1]}`]});
+                } else {
+                    msg.channel.send(`Sorry ${funny[Math.floor(Math.random()*funny.length)]} you don't have permission for that`)
+                }
             }
         });
     };
+
     if(msg.content == '!managerfiles') {
         fs.readdir('../manager', (err, files) => {
             if(err) {
@@ -107,6 +113,37 @@ client.on('messageCreate', async (msg) => {
             });
             msg.channel.send(filelist.toString().replaceAll(',', '\n'));
         });
+    };
+
+    if(msg.content.startsWith('!help')) {
+        const embed = new EmbedBuilder()
+            .setTitle('List of all commands')
+            .setColor('DarkPurple')
+            .addFields(
+                {name: 'General commands', value: '!assets - gives a list of all files in the assets directory\n!add - adds yourself to the db (wip might be removed)\n!delete - deletes yourself from db (wip might be removed)\n!welcome - Sends the welcome image (test commad)\n!bye - Sends the bye image (test commad)\n!info <optional:Patria/DHDS (DrHouseDatingSim)> - gives general info about neogamia and if game name is given info about mentioned game'},
+                {name: 'Admin', value: '!assets <name> - sends the assets to the chat'}
+            );
+        msg.channel.send({embeds: [embed]})
+    };
+
+    if(msg.content == '!rolesetup') {
+        msg.channel.send('# Selectable Roles\n\nSex:\nMale - :man:\nFemale - :woman:\n\nGender:\nMale - ♂\nFemale - :female_sign:\nNon-binary - :flag_de: \nOther - :man_shrugging:').then(function (msg) {
+            msg.react('👨');
+            msg.react('👩');
+            msg.react('♂');
+            msg.react('♀')
+            msg.react('🇩🇪');
+            msg.react('🤷‍♂️');
+        });
+    };
+
+    if(msg.content == '!info') {
+        if(args[1] == null) {
+            msg.channel.send('# Neogamia\nThe project started on May 19th 2025 when Thanon chatted with Steve on Twitter about his cool idea of making an Fantasy MMORPG, which later they named Patria');
+        }
+        if(args[1] == 'Patria') {
+            msg.channel.send('# Patria\nOn June 7nd 2025 Thanon the head developer and Steve the head designer started working on Patria, the game was first started in unity but later they used C++ and DirectX')
+        }
     };
     //console.log(readfromdb('SELECT displayname FROM users WHERE id=' + msg.author.id));
 });
@@ -144,13 +181,45 @@ client.on('messageDelete', async (msg) => {
             )
             .setTimestamp()
             .setFooter({ text: 'Manager by Neogamia'});
+        channel.send({embeds: [embed]});
+    });
+});
+
+client.on('messageDeleteBulk', async (msg) => {
+    //loggingChannel.send('test');
+    msg.guild.channels.fetch('1402229749597736990').then((channel) => {
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTitle(`Message with id ${msg.id} was deleted`)
+            .addFields(
+                {name: 'author', value: msg.author.toString(), inline: true},
+                {name: 'message content', value: msg.content.toString(), inline: true}
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Manager by Neogamia'});
         channel.send({embeds: [embed]})
     })
+});
+
+client.on('messageReactionAdd', async (reaction) => {
+    if(reaction.emoji == '🇩🇪') {
+        console.log('Super');
+    }
 })
 
 client.on('voiceStateUpdate', async (channel) => {
+    channel.guild.fetch('1402229749597736990').then((channel) => {
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTitle(`User $} was deleted`)
+            .addFields(
+                {name: 'author', value: msg.author.toString(), inline: true},
+                {name: 'message content', value: msg.content.toString(), inline: true}
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Manager by Neogamia'});
+        channel.send({embeds: [embed]})
+    });
 });
-
-
 
 client.login(process.env.discordbot_token);
