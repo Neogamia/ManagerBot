@@ -1,13 +1,17 @@
-import { Client, Colors, Embed, EmbedBuilder, Events, GatewayIntentBits, TimestampStyles } from "discord.js";
+import { ActionRow, ActionRowBuilder, ChannelType, Client, Colors, ComponentType, Embed, EmbedBuilder, Events, GatewayIntentBits, GuildChannel, PermissionOverwrites, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TimestampStyles } from "discord.js";
 import dotenv from "dotenv";
-import { execute, readfromdb } from "./db/sqlite.mjs";
 import { byeImg, welcomeImg } from "./imggen.mjs";
 import fs from 'fs';
 import { channel } from "diagnostics_channel";
+import sqlite3 from 'sqlite3';
 dotenv.config();
 
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] 
+});
+
+const db = new sqlite3.Database('../../databases/manager.sqlite', sqlite3.OPEN_READWRITE, (err) => {
+    if(err) return console.log(err.message);
 });
 
 client.once(Events.ClientReady, async (readyClient) => {
@@ -15,25 +19,16 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on('messageCreate', async (msg) => {
-    let args = msg.content.split(' ', 2);
-    if(msg.content.startsWith('add')) {
-        if(!execute('SELECT * FROM users WHERE username LIKE "thanongaming"')) {
-            msg.channel.send('exists in db');
-        } else {
-            msg.channel.send('dosnt exist in db')
-        }
-        //if(execute('SELECT * FROM users WHERE id ="' +  msg.author.id + '"')) {
-            execute("INSERT INTO users (displayname, username, id, money, xp, level) VALUES ('" + msg.author.displayName + "','" + msg.author.username + "','"+ msg.author.id + "', '100', '0', '1')");
-            msg.channel.send('Created new user in db')
-        //} else {
-            //msg.channel.send('User with this id already exists')
-        //}
+    let args = msg.content.split(' ');
+
+    if(msg.content.startsWith('!db-test1')) {
+        db.all('SELECT * FROM users', [], (err, rows) => {
+            rows.forEach(row => {
+                console.log(row);
+            })
+        });
     };
-    if(msg.content == 'delete') {
-        execute('DELETE FROM users WHERE id =' + msg.author.id);
-        msg.channel.send('deleted user with id ' + msg.author.id + ' from db');
-    }
-    
+
     if(msg.content == '!welcome') {
         welcomeImg(msg.author, msg.guild);
         setTimeout(() => {
@@ -78,43 +73,6 @@ client.on('messageCreate', async (msg) => {
         });
     };
 
-    if(msg.content == '!managerfiles') {
-        fs.readdir('../manager', (err, files) => {
-            if(err) {
-                msg.channel.send(`Error reading directory: `, err);
-                return;
-            }
-            
-            const filelist = [];
-            files.forEach(file => {
-                filelist.push(file);
-                fs.readdir('./' + file, (err, files) => {
-                    if(err) {
-                        return;
-                    }
-                    
-                    const filelist = [];
-                    files.forEach(file => {
-                        filelist.push(file);
-                        fs.readdir('/' + file, (err, files) => {
-                            if(err) {
-                                return;
-                            }
-                            
-                            const filelist = [];
-                            files.forEach(file => {
-                                filelist.push(file);
-                            });
-                            msg.channel.send(filelist.toString().replaceAll(',', '\n'));
-                        });
-                    });
-                    msg.channel.send(filelist.toString().replaceAll(',', '\n'));
-                });
-            });
-            msg.channel.send(filelist.toString().replaceAll(',', '\n'));
-        });
-    };
-
     if(msg.content.startsWith('!help')) {
         const embed = new EmbedBuilder()
             .setTitle('List of all commands')
@@ -145,7 +103,46 @@ client.on('messageCreate', async (msg) => {
             msg.channel.send('# Patria\nOn June 7nd 2025 Thanon the head developer and Steve the head designer started working on Patria, the game was first started in unity but later they used C++ and DirectX')
         }
     };
-    //console.log(readfromdb('SELECT displayname FROM users WHERE id=' + msg.author.id));
+
+    if(msg.content == '!ticket') {
+        const select = new StringSelectMenuBuilder()
+            .setCustomId('ticket')
+            .setPlaceholder('ticket reason')
+            .addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Application')
+                    .setDescription('Application to become part of our team')
+                    .setValue('apply'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Partnership')
+                    .setDescription('Application and talk for partnership')
+                    .setValue('partnership'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Request')
+                    .setDescription('If you want to hire us or want to be taught')
+                    .setValue('request'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Other')
+                    .setDescription('Other reason')
+                    .setValue('other')
+            );
+        const row = new ActionRowBuilder()
+            .addComponents(select);
+
+        const tickmsg = await msg.channel.send({content: 'temp msg', components: [row]});
+
+        const collector = tickmsg.createMessageComponentCollector({
+            componentType: ComponentType.StringSelect,
+        });
+
+        collector.on('collect', (interaction) => {
+            interaction.reply(`Creating ticket channel for: ${interaction.values}`);
+            const ticketchannel = msg.guild.channels.create({
+                name: `ticket-${interaction.values}-${Math.random()}`,
+                type: ChannelType.GuildText,
+            })
+        })
+    }
 });
 
 client.on('guildMemberAdd', async (member) => {
